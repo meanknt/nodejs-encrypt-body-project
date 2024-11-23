@@ -8,9 +8,9 @@ This project is a **web application** designed to simulate secure data transmiss
 
 This project includes three versions of secure communication to demonstrate different approaches to handling data:
 
-- **Version 1 (v1):** Encrypts the request body using **AES (CBC)** and sends it as a JSON payload.
-- **Version 2 (v2):** Sends the **AES-encrypted body** as a raw string, removing JSON wrapping.
-- **Version 3 (v3):** Sends plain JSON and adds an **HMAC hash** in the request headers to verify the integrity of the request body.
+- **App 1:** Encrypts the request body using **AES (CBC)** and sends it as a JSON payload.
+- **App 2:** Sends the **AES-encrypted body** as a raw string, removing JSON wrapping.
+- **App 3:** Sends plain JSON and adds an **HMAC hash** in the request headers to verify the integrity of the request body.
 
 ---
 
