@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login (Version 3)</title>
+</head>
+<body>
+    <h1>Login (Version 3)</h1>
+    <form id="loginForm">
+        <label for="username">Username:</label>
+        <input type="text" id="username" required><br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" required><br><br>
+        <button type="submit">Login</button>
+    </form>
+    <br>
+    <a href="/">
+        <button>Back to Home</button>
+    </a>
+    <script>
+        // คีย์ลับต้องเหมือนกับที่เซิร์ฟเวอร์ใช้
+        const secretKey = 'super_secret_key';
+
+        // ฟังก์ชันสร้าง HMAC
+        function generateHMAC(body, key) {
+            return CryptoJS.HmacSHA256(JSON.stringify(body), key).toString();
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const body = { username, password };
+            const hashid = generateHMAC(body, secretKey);
+
+            const response = await fetch('/v3_login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'hashid': hashid // เพิ่ม hashid ใน Header
+                },
+                body: JSON.stringify(body)
+            });
+
+            const result = await response.json();
+
+            if (result.userId) {
+                alert(result.message);
+                localStorage.setItem('userId', result.userId);
+                window.location.href = '/v3_profile.html';
+            } else {
+                alert(result.message);
+            }
+        });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</body>
+</html>

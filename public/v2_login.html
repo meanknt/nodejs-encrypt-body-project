@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login (Version 2)</title>
+</head>
+<body>
+    <h1>Login (Version 2)</h1>
+    <form id="loginForm">
+        <label for="username">Username:</label>
+        <input type="text" id="username" required><br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" required><br><br>
+        <button type="submit">Login</button>
+    </form>
+    <br>
+    <a href="/">
+        <button>Back to Home</button>
+    </a>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script>
+        const key = CryptoJS.enc.Utf8.parse('IVERYLOVECATANDD');
+        const iv = CryptoJS.enc.Utf8.parse('1234567890abcdef');
+
+        // ฟังก์ชันเข้ารหัส AES (CBC)
+        function encryptAES(data) {
+            const encrypted = CryptoJS.AES.encrypt(JSON.stringify(data), key, {
+                iv: iv,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            });
+            return encrypted.toString();
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // เข้ารหัสข้อมูล
+            const encryptedBody = encryptAES({ username, password });
+
+            // ส่งข้อมูลไปเซิร์ฟเวอร์
+            const response = await fetch('/v2_login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' }, // เปลี่ยนเป็น text/plain
+                body: encryptedBody // ส่งข้อมูลเป็น Raw String
+            });
+
+            const result = await response.text(); // รับ Response เป็น Raw String
+
+            // ถอดรหัส Response
+            const decryptedData = JSON.parse(
+                CryptoJS.AES.decrypt(result, key, {
+                    iv: iv,
+                    mode: CryptoJS.mode.CBC,
+                    padding: CryptoJS.pad.Pkcs7
+                }).toString(CryptoJS.enc.Utf8)
+            );
+
+            if (decryptedData.userId) {
+                alert(decryptedData.message);
+                localStorage.setItem('userId', decryptedData.userId);
+                window.location.href = '/v2_profile.html';
+            } else {
+                alert(decryptedData.message);
+            }
+        });
+    </script>
+</body>
+</html>

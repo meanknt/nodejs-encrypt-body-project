@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile (Version 1)</title>
+</head>
+<body>
+    <h1>Profile</h1>
+    <div id="profileContainer"></div>
+    <button id="logoutBtn">Logout</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script>
+        const key = CryptoJS.enc.Utf8.parse('IVERYLOVECATANDD');
+        const iv = CryptoJS.enc.Utf8.parse('1234567890abcdef');
+
+        // ฟังก์ชันเข้ารหัส AES (CBC)
+        function encryptAES(data) {
+            const encrypted = CryptoJS.AES.encrypt(JSON.stringify(data), key, {
+                iv: iv,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            });
+            return encrypted.toString();
+        }
+
+        async function fetchProfile() {
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+                alert('Unauthorized access');
+                window.location.href = '/v1_login.html';
+                return;
+            }
+
+            // เข้ารหัส userId เพื่อส่งไปยัง API
+            const payload = encryptAES({ id: userId });
+
+            const response = await fetch('/v1_profile', {  // เปลี่ยนให้ตรงกับเส้นทาง API
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payload })
+            });
+
+            const result = await response.json();
+
+            // ถอดรหัส Response
+            const decryptedData = JSON.parse(
+                CryptoJS.AES.decrypt(result.payload, key, {
+                    iv: iv,
+                    mode: CryptoJS.mode.CBC,
+                    padding: CryptoJS.pad.Pkcs7
+                }).toString(CryptoJS.enc.Utf8)
+            );
+
+            if (decryptedData.id) {
+                document.getElementById('profileContainer').innerHTML = `
+                    <p>ID: ${decryptedData.id}</p>
+                    <p>Username: ${decryptedData.username}</p>
+                    <p>Profile: ${decryptedData.profile}</p>
+                `;
+            } else {
+                document.getElementById('profileContainer').innerHTML = '<p>Profile not found</p>';
+            }
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('userId');
+            window.location.href = '/v1_login.html';
+        });
+
+        fetchProfile();
+    </script>
+</body>
+</html>
