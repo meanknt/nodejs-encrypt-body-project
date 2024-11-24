@@ -26,4 +26,5 @@ Follow these steps to install and run the project locally:
    cd nodejs-encrypt-body-project
    npm install
    node app.js
+   Server running on http://localhost:3000
    ```
