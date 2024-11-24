@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile (Version 4)</title>
+</head>
+<body>
+    <h1>Profile (Version 4)</h1>
+    <div id="profileContainer"></div>
+    <button id="logoutBtn">Logout</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script>
+        const key = CryptoJS.enc.Utf8.parse('IVERYLOVECATANDD'); // Same key as the backend
+
+        // Function to decrypt AES with dynamic IV
+        function decryptWithDynamicIV(iv, encryptedData) {
+            return JSON.parse(
+                CryptoJS.AES.decrypt(encryptedData, key, {
+                    iv: CryptoJS.enc.Base64.parse(iv), // Decode the IV from Base64
+                    mode: CryptoJS.mode.CBC,
+                    padding: CryptoJS.pad.Pkcs7
+                }).toString(CryptoJS.enc.Utf8)
+            );
+        }
+
+        // Function to encrypt with dynamic IV for requests
+        function encryptWithDynamicIV(data) {
+            const iv = CryptoJS.lib.WordArray.random(16); // Generate random IV
+            const encrypted = CryptoJS.AES.encrypt(JSON.stringify(data), key, {
+                iv: iv,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            });
+            return {
+                iv: iv.toString(CryptoJS.enc.Base64), // Send IV as Base64
+                data: encrypted.toString() // Send encrypted data as Base64
+            };
+        }
+
+        async function fetchProfile() {
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+                alert('Unauthorized access');
+                window.location.href = '/v4_login.html';
+                return;
+            }
+
+            // Encrypt the request body with dynamic IV
+            const encryptedBody = encryptWithDynamicIV({ id: userId });
+
+            try {
+                const response = await fetch('/v4_profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(encryptedBody) // Send the encrypted body
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+
+                    // Decrypt the response using the returned IV and data
+                    const decryptedData = decryptWithDynamicIV(result.iv, result.data);
+
+                    if (decryptedData.id) {
+                        document.getElementById('profileContainer').innerHTML = `
+                            <p>ID: ${decryptedData.id}</p>
+                            <p>Username: ${decryptedData.username}</p>
+                            <p>Profile: ${decryptedData.profile}</p>
+                        `;
+                    } else {
+                        document.getElementById('profileContainer').innerHTML = '<p>Profile not found</p>';
+                    }
+                } else {
+                    const error = await response.json();
+                    alert(`Error: ${error.message}`);
+                    document.getElementById('profileContainer').innerHTML = '<p>Error fetching profile</p>';
+                }
+            } catch (err) {
+                console.error('Error fetching profile:', err);
+                document.getElementById('profileContainer').innerHTML = '<p>Error fetching profile</p>';
+            }
+        }
+
+        // Logout function
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('userId'); // Remove userId from localStorage
+            window.location.href = '/v4_login.html'; // Redirect to the login page
+        });
+
+        // Fetch profile data when the page loads
+        fetchProfile();
+    </script>
+</body>
+</html>

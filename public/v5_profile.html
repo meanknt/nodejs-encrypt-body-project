@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile (Version 5)</title>
+</head>
+<body>
+    <h1>Profile (Version 5)</h1>
+    <div id="profileContainer"></div>
+    <button id="logoutBtn">Logout</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script>
+        // Function to encrypt data with dynamic key and IV
+        function encryptWithDynamicKeyAndIV(data) {
+            const dynamicKey = CryptoJS.lib.WordArray.random(16);
+            const dynamicIV = CryptoJS.lib.WordArray.random(16);
+
+            const encrypted = CryptoJS.AES.encrypt(JSON.stringify(data), dynamicKey, {
+                iv: dynamicIV,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            });
+
+            return {
+                key: dynamicKey.toString(CryptoJS.enc.Base64),
+                iv: dynamicIV.toString(CryptoJS.enc.Base64),
+                data: encrypted.toString()
+            };
+        }
+
+        async function fetchProfile() {
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+                alert('Unauthorized access');
+                window.location.href = '/v5_login.html';
+                return;
+            }
+
+            // Encrypt userId with dynamic key and IV
+            const { key, iv, data } = encryptWithDynamicKeyAndIV({ id: userId });
+
+            // Send the encrypted data to the server
+            const response = await fetch('/v5_profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key, iv, data })
+            });
+
+            const result = await response.json();
+
+            // Decrypt the server's response
+            const decryptedResponse = CryptoJS.AES.decrypt(result.data, CryptoJS.enc.Base64.parse(result.key), {
+                iv: CryptoJS.enc.Base64.parse(result.iv),
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            }).toString(CryptoJS.enc.Utf8);
+
+            const parsedResponse = JSON.parse(decryptedResponse);
+
+            if (parsedResponse.id) {
+                document.getElementById('profileContainer').innerHTML = `
+                    <p>ID: ${parsedResponse.id}</p>
+                    <p>Username: ${parsedResponse.username}</p>
+                    <p>Profile: ${parsedResponse.profile}</p>
+                `;
+            } else {
+                document.getElementById('profileContainer').innerHTML = '<p>Profile not found</p>';
+            }
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('userId');
+            window.location.href = '/v5_login.html';
+        });
+
+        fetchProfile();
+    </script>
+</body>
+</html>

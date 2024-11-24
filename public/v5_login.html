@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login (Version 5)</title>
+</head>
+<body>
+    <h1>Login (Version 5)</h1>
+    <form id="loginForm">
+        <label for="username">Username:</label>
+        <input type="text" id="username" required><br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" required><br><br>
+        <button type="submit">Login</button>
+    </form>
+    <br>
+    <a href="/">
+        <button>Back to Home</button>
+    </a>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script>
+        // Function to encrypt data with dynamic key and IV
+        function encryptWithDynamicKeyAndIV(data) {
+            const dynamicKey = CryptoJS.lib.WordArray.random(16);
+            const dynamicIV = CryptoJS.lib.WordArray.random(16);
+
+            const encrypted = CryptoJS.AES.encrypt(JSON.stringify(data), dynamicKey, {
+                iv: dynamicIV,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            });
+
+            return {
+                key: dynamicKey.toString(CryptoJS.enc.Base64),
+                iv: dynamicIV.toString(CryptoJS.enc.Base64),
+                data: encrypted.toString()
+            };
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // Encrypt data with dynamic key and IV
+            const { key, iv, data } = encryptWithDynamicKeyAndIV({ username, password });
+
+            // Send the encrypted data to the server
+            const response = await fetch('/v5_login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key, iv, data })
+            });
+
+            const result = await response.json();
+
+            // Decrypt the server's response
+            const decryptedResponse = CryptoJS.AES.decrypt(result.data, CryptoJS.enc.Base64.parse(result.key), {
+                iv: CryptoJS.enc.Base64.parse(result.iv),
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            }).toString(CryptoJS.enc.Utf8);
+
+            const parsedResponse = JSON.parse(decryptedResponse);
+
+            if (parsedResponse.userId) {
+                alert(parsedResponse.message);
+                localStorage.setItem('userId', parsedResponse.userId);
+                window.location.href = '/v5_profile.html';
+            } else {
+                alert(parsedResponse.message);
+            }
+        });
+    </script>
+</body>
+</html>

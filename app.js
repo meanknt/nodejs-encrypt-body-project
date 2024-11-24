@@ -10,21 +10,21 @@ const PORT = 3000;
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// คีย์และ IV สำหรับการเข้ารหัส/ถอดรหัส (Version 1 และ 2)
+// Key and IV for Encrypt/Decrypt (Version 1 and 2)
 const key = Buffer.from('IVERYLOVECATANDD', 'utf-8'); // 16-byte Key
 const iv = Buffer.from('1234567890abcdef', 'utf-8'); // 16-byte IV
 
-// คีย์ลับสำหรับ HMAC (Version 3)
+// Key for HMAC (Version 3)
 const secretKey = 'super_secret_key';
 
-// Mock ข้อมูลผู้ใช้งาน
+// Mock Data
 const users = {
     "0001": { id: "0001", username: "admin", profile: "This is admin profile." },
     "0002": { id: "0002", username: "user2", profile: "This is user2 profile." },
-    "0005": { id: "0005", username: "user5", profile: "This is user5 profile." }
+    "0005": { id: "0005", username: "SuperAdmin", profile: "This is SuperAdmin profile." }
 };
 
-// ฟังก์ชันเข้ารหัส AES (CBC)
+// Function to Encrypt Data with AES (CBC)
 function encryptAES(data) {
     const cipher = crypto.createCipheriv('aes-128-cbc', key, iv);
     let encrypted = cipher.update(JSON.stringify(data), 'utf-8', 'base64');
@@ -32,7 +32,7 @@ function encryptAES(data) {
     return encrypted;
 }
 
-// ฟังก์ชันถอดรหัส AES (CBC)
+// Function to Decrypt Data with AES (CBC)
 function decryptAES(encrypted) {
     const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
     let decrypted = decipher.update(encrypted, 'base64', 'utf-8');
@@ -40,10 +40,54 @@ function decryptAES(encrypted) {
     return JSON.parse(decrypted); // คืนค่าข้อมูล JSON
 }
 
-// ฟังก์ชันสร้าง HMAC (Version 3)
+// Function to Encrypt HMAC (Version 3)
 function generateHMAC(body, key) {
     return crypto.createHmac('sha256', key).update(JSON.stringify(body)).digest('hex');
 }
+
+// Function to Encrypt Data with Dynamic IV
+function encryptWithDynamicIV(data) {
+    const dynamicIV = crypto.randomBytes(16); // Generate a new random IV
+    const cipher = crypto.createCipheriv('aes-128-cbc', key, dynamicIV);
+    let encrypted = cipher.update(JSON.stringify(data), 'utf-8', 'base64');
+    encrypted += cipher.final('base64');
+    return {
+        iv: dynamicIV.toString('base64'), // Send IV as base64
+        data: encrypted // Encrypted data as base64
+    };
+}
+
+// Function to Decrypt Data with Dynamic IV
+function decryptWithDynamicIV(iv, encryptedData) {
+    const decipher = crypto.createDecipheriv('aes-128-cbc', key, Buffer.from(iv, 'base64'));
+    let decrypted = decipher.update(encryptedData, 'base64', 'utf-8');
+    decrypted += decipher.final('utf-8');
+    return JSON.parse(decrypted); // Parse JSON data after decryption
+}
+
+function generateDynamicKeyAndIV() {
+    return {
+        key: crypto.randomBytes(16), // 16-byte random key
+        iv: crypto.randomBytes(16)  // 16-byte random IV
+    };
+}
+
+// Function to encrypt data with a dynamic key and IV
+function encryptWithDynamicKeyAndIV(data, key, iv) {
+    const cipher = crypto.createCipheriv('aes-128-cbc', key, iv);
+    let encrypted = cipher.update(JSON.stringify(data), 'utf-8', 'base64');
+    encrypted += cipher.final('base64');
+    return encrypted;
+}
+
+// Function to decrypt data with a dynamic key and IV
+function decryptWithDynamicKeyAndIV(key, iv, encryptedData) {
+    const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
+    let decrypted = decipher.update(encryptedData, 'base64', 'utf-8');
+    decrypted += decipher.final('utf-8');
+    return JSON.parse(decrypted); // Parse decrypted JSON
+}
+
 
 // Serve App1 (Version 1) Login Page
 app.get('/v1_login', (req, res) => {
@@ -58,6 +102,16 @@ app.get('/v2_login', (req, res) => {
 // Serve App3 (Version 3) Login Page
 app.get('/v3_login', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'v3_login.html'));
+});
+
+// Serve App4 (Version 4) Login Page
+app.get('/v4_login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'v4_login.html'));
+});
+
+// Serve App5 (Version 5) Login Page
+app.get('/v5_login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'v5_login.html'));
 });
 
 // API Login (Version 1)
@@ -193,7 +247,142 @@ app.post('/v3_profile', (req, res) => {
     }
 });
 
-// เริ่มเซิร์ฟเวอร์
+app.post('/v4_login', (req, res) => {
+    try {
+        const { iv, data } = req.body; // Extract IV and encrypted data
+        const decryptedData = decryptWithDynamicIV(iv, data); // Decrypt data using IV
+        const { username, password } = decryptedData;
+
+        if (username === 'admin' && password === 'admin') {
+            const response = { message: 'Login successful', userId: '0001' };
+            const encryptedResponse = encryptWithDynamicIV(response); // Encrypt response
+            res.json(encryptedResponse);
+        } else {
+            const response = { message: 'Invalid credentials' };
+            const encryptedResponse = encryptWithDynamicIV(response);
+            res.status(401).json(encryptedResponse);
+        }
+    } catch (err) {
+        const response = { message: 'Invalid payload', error: err.message };
+        const encryptedResponse = encryptWithDynamicIV(response);
+        res.status(400).json(encryptedResponse);
+    }
+});
+
+// API Profile (Version 4)
+app.post('/v4_profile', (req, res) => {
+    try {
+        const { iv, data } = req.body; // Extract IV and encrypted data
+        const decryptedData = decryptWithDynamicIV(iv, data); // Decrypt data using IV
+        const { id } = decryptedData;
+
+        if (users[id]) {
+            const encryptedResponse = encryptWithDynamicIV(users[id]); // Encrypt response
+            res.json(encryptedResponse);
+        } else {
+            const response = { message: 'Profile not found' };
+            const encryptedResponse = encryptWithDynamicIV(response);
+            res.status(404).json(encryptedResponse);
+        }
+    } catch (err) {
+        const response = { message: 'Invalid payload', error: err.message };
+        const encryptedResponse = encryptWithDynamicIV(response);
+        res.status(400).json(encryptedResponse);
+    }
+});
+
+// API Login (Version 5)
+app.post('/v5_login', (req, res) => {
+    try {
+        const { key: receivedKey, iv: receivedIV, data } = req.body;
+        const decryptedData = decryptWithDynamicKeyAndIV(
+            Buffer.from(receivedKey, 'base64'), 
+            Buffer.from(receivedIV, 'base64'), 
+            data
+        );
+
+        const { username, password } = decryptedData;
+
+        if (username === 'admin' && password === 'admin') {
+            const response = { message: 'Login successful', userId: '0001' };
+            const { key, iv } = generateDynamicKeyAndIV();
+            const encryptedResponse = encryptWithDynamicKeyAndIV(response, key, iv);
+
+            res.json({
+                key: key.toString('base64'),
+                iv: iv.toString('base64'),
+                data: encryptedResponse
+            });
+        } else {
+            const response = { message: 'Invalid credentials' };
+            const { key, iv } = generateDynamicKeyAndIV();
+            const encryptedResponse = encryptWithDynamicKeyAndIV(response, key, iv);
+
+            res.status(401).json({
+                key: key.toString('base64'),
+                iv: iv.toString('base64'),
+                data: encryptedResponse
+            });
+        }
+    } catch (err) {
+        const response = { message: 'Invalid payload', error: err.message };
+        const { key, iv } = generateDynamicKeyAndIV();
+        const encryptedResponse = encryptWithDynamicKeyAndIV(response, key, iv);
+
+        res.status(400).json({
+            key: key.toString('base64'),
+            iv: iv.toString('base64'),
+            data: encryptedResponse
+        });
+    }
+});
+
+// API Profile (Version 5)
+app.post('/v5_profile', (req, res) => {
+    try {
+        const { key: receivedKey, iv: receivedIV, data } = req.body;
+        const decryptedData = decryptWithDynamicKeyAndIV(
+            Buffer.from(receivedKey, 'base64'), 
+            Buffer.from(receivedIV, 'base64'), 
+            data
+        );
+
+        const { id } = decryptedData;
+
+        if (users[id]) {
+            const { key, iv } = generateDynamicKeyAndIV();
+            const encryptedResponse = encryptWithDynamicKeyAndIV(users[id], key, iv);
+
+            res.json({
+                key: key.toString('base64'),
+                iv: iv.toString('base64'),
+                data: encryptedResponse
+            });
+        } else {
+            const response = { message: 'Profile not found' };
+            const { key, iv } = generateDynamicKeyAndIV();
+            const encryptedResponse = encryptWithDynamicKeyAndIV(response, key, iv);
+
+            res.status(404).json({
+                key: key.toString('base64'),
+                iv: iv.toString('base64'),
+                data: encryptedResponse
+            });
+        }
+    } catch (err) {
+        const response = { message: 'Invalid payload', error: err.message };
+        const { key, iv } = generateDynamicKeyAndIV();
+        const encryptedResponse = encryptWithDynamicKeyAndIV(response, key, iv);
+
+        res.status(400).json({
+            key: key.toString('base64'),
+            iv: iv.toString('base64'),
+            data: encryptedResponse
+        });
+    }
+});
+
+// Start server
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
