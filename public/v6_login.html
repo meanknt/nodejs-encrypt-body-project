@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login (Version 1)</title>
+    <title>Login (Version 6)</title>
 </head>
 <body>
-    <h1>Login (Version 1)</h1>
+    <h1>Login (Version 6)</h1>
     <form id="loginForm">
         <label for="username">Username:</label>
         <input type="text" id="username" required><br><br>
@@ -24,7 +24,7 @@
         const key = CryptoJS.enc.Utf8.parse('IVERYLOVECATANDD');
         const iv = CryptoJS.enc.Utf8.parse('1234567890abcdef');
 
-        // AES encryption function (CBC mode)
+        // AES encryption function
         function encryptAES(data) {
             const encrypted = CryptoJS.AES.encrypt(JSON.stringify(data), key, {
                 iv: iv,
@@ -40,33 +40,24 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
-            // Encrypt the data
+            // Encrypt data
             const payload = encryptAES({ username, password });
 
-            // Send data to the server
-            const response = await fetch('/v1_login', {  <!-- ต้องเปลี่ยนเป็น /v1_login -->
+            // Send encrypted data to the server
+            const response = await fetch('/v6_login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ payload }) // Add payload
+                body: JSON.stringify({ payload })
             });
 
             const result = await response.json();
 
-            // Decrypt the response
-            const decryptedData = JSON.parse(
-                CryptoJS.AES.decrypt(result.payload, key, {
-                    iv: iv,
-                    mode: CryptoJS.mode.CBC,
-                    padding: CryptoJS.pad.Pkcs7
-                }).toString(CryptoJS.enc.Utf8)
-            );
-
-            if (decryptedData.userId) {
-                alert(decryptedData.message);
-                localStorage.setItem('userId', decryptedData.userId);
-                window.location.href = '/v1_profile.html';
+            if (result.userId) {
+                alert(result.message);
+                localStorage.setItem('userId', result.userId);
+                window.location.href = '/v6_profile.html';
             } else {
-                alert(decryptedData.message);
+                alert(result.message);
             }
         });
     </script>

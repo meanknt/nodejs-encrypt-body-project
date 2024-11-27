@@ -15,7 +15,7 @@
         const key = CryptoJS.enc.Utf8.parse('IVERYLOVECATANDD');
         const iv = CryptoJS.enc.Utf8.parse('1234567890abcdef');
 
-        // ฟังก์ชันเข้ารหัส AES (CBC)
+        // AES encryption function (CBC mode)
         function encryptAES(data) {
             const encrypted = CryptoJS.AES.encrypt(JSON.stringify(data), key, {
                 iv: iv,
@@ -33,18 +33,18 @@
                 return;
             }
 
-            // เข้ารหัส userId เพื่อส่งไปยัง API
+            // Encrypt userId to send to the API
             const encryptedBody = encryptAES({ id: userId });
 
             const response = await fetch('/v2_profile', {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain' }, // เปลี่ยนเป็น text/plain
-                body: encryptedBody // ส่งข้อมูลเป็น Raw String
+                headers: { 'Content-Type': 'text/plain' }, // Change to text/plain
+                body: encryptedBody // Send data as a raw string
             });
 
-            const result = await response.text(); // รับ Response เป็น Raw String
+            const result = await response.text(); // Receive response as a raw string
 
-            // ถอดรหัส Response
+            // Decrypt the response
             const decryptedData = JSON.parse(
                 CryptoJS.AES.decrypt(result, key, {
                     iv: iv,

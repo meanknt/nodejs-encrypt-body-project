@@ -3,19 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile (Version 1)</title>
+    <title>Profile (Version 6)</title>
 </head>
 <body>
-    <h1>Profile</h1>
+    <h1>Profile (Version 6)</h1>
     <div id="profileContainer"></div>
     <button id="logoutBtn">Logout</button>
+    <a href="/">
+        <button>Back to Home</button>
+    </a>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script>
         const key = CryptoJS.enc.Utf8.parse('IVERYLOVECATANDD');
         const iv = CryptoJS.enc.Utf8.parse('1234567890abcdef');
 
-        // AES encryption function (CBC mode)
+        // AES encryption function
         function encryptAES(data) {
             const encrypted = CryptoJS.AES.encrypt(JSON.stringify(data), key, {
                 iv: iv,
@@ -29,14 +32,14 @@
             const userId = localStorage.getItem('userId');
             if (!userId) {
                 alert('Unauthorized access');
-                window.location.href = '/v1_login.html';
+                window.location.href = '/v6_login.html';
                 return;
             }
 
-             // Encrypt userId to send it to the API
+            // Encrypt userId
             const payload = encryptAES({ id: userId });
 
-            const response = await fetch('/v1_profile', {  // Match the API endpoin
+            const response = await fetch('/v6_profile', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ payload })
@@ -44,20 +47,11 @@
 
             const result = await response.json();
 
-            // Decrypt the response
-            const decryptedData = JSON.parse(
-                CryptoJS.AES.decrypt(result.payload, key, {
-                    iv: iv,
-                    mode: CryptoJS.mode.CBC,
-                    padding: CryptoJS.pad.Pkcs7
-                }).toString(CryptoJS.enc.Utf8)
-            );
-
-            if (decryptedData.id) {
+            if (result.id) {
                 document.getElementById('profileContainer').innerHTML = `
-                    <p>ID: ${decryptedData.id}</p>
-                    <p>Username: ${decryptedData.username}</p>
-                    <p>Profile: ${decryptedData.profile}</p>
+                    <p>ID: ${result.id}</p>
+                    <p>Username: ${result.username}</p>
+                    <p>Profile: ${result.profile}</p>
                 `;
             } else {
                 document.getElementById('profileContainer').innerHTML = '<p>Profile not found</p>';
@@ -66,7 +60,7 @@
 
         document.getElementById('logoutBtn').addEventListener('click', () => {
             localStorage.removeItem('userId');
-            window.location.href = '/v1_login.html';
+            window.location.href = '/v6_login.html';
         });
 
         fetchProfile();

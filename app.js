@@ -6,7 +6,7 @@ const path = require('path');
 const app = express();
 const PORT = 3000;
 
-// ใช้ body-parser สำหรับ JSON (เฉพาะ Version 1 และ 3)
+// Use body-parser for JSON (only for Version 1 and 3)
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -37,7 +37,7 @@ function decryptAES(encrypted) {
     const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
     let decrypted = decipher.update(encrypted, 'base64', 'utf-8');
     decrypted += decipher.final('utf-8');
-    return JSON.parse(decrypted); // คืนค่าข้อมูล JSON
+    return JSON.parse(decrypted); // Return JSON data
 }
 
 // Function to Encrypt HMAC (Version 3)
@@ -117,13 +117,13 @@ app.get('/v5_login', (req, res) => {
 // API Login (Version 1)
 app.post('/v1_login', (req, res) => {
     try {
-        const { payload } = req.body; // รับ payload ที่ถูกเข้ารหัส
-        const decryptedData = decryptAES(payload); // ถอดรหัส payload
+        const { payload } = req.body; // Receive the encrypted payload
+        const decryptedData = decryptAES(payload); // Decrypt the payload
         const { username, password } = decryptedData;
 
         if (username === 'admin' && password === 'admin') {
             const response = { message: 'Login successful', userId: '0001' };
-            const encryptedResponse = encryptAES(response); // เข้ารหัส Response
+            const encryptedResponse = encryptAES(response); // Encrypt the response
             res.json({ payload: encryptedResponse });
         } else {
             const response = { message: 'Invalid credentials' };
@@ -138,12 +138,12 @@ app.post('/v1_login', (req, res) => {
 });
 app.post('/v1_profile', (req, res) => {
     try {
-        const { payload } = req.body; // รับ payload ที่ถูกเข้ารหัส
-        const decryptedData = decryptAES(payload); // ถอดรหัส payload
+        const { payload } = req.body; // Receive the encrypted payload
+        const decryptedData = decryptAES(payload); // Decrypt the payload
         const { id } = decryptedData;
 
         if (users[id]) {
-            const encryptedResponse = encryptAES(users[id]); // เข้ารหัส Response
+            const encryptedResponse = encryptAES(users[id]); // Encrypt the response
             res.json({ payload: encryptedResponse });
         } else {
             const response = { message: 'Profile not found' };
@@ -160,14 +160,14 @@ app.post('/v1_profile', (req, res) => {
 // API Login (Version 2)
 app.post('/v2_login', express.raw({ type: '*/*' }), (req, res) => {
     try {
-        const encryptedBody = req.body.toString(); // รับค่า Raw String
-        const decryptedData = decryptAES(encryptedBody); // ถอดรหัส
+        const encryptedBody = req.body.toString(); // Receive the raw encrypted string
+        const decryptedData = decryptAES(encryptedBody); // Decrypt the string
         const { username, password } = decryptedData;
 
         if (username === 'admin' && password === 'admin') {
             const response = { message: 'Login successful', userId: '0001' };
-            const encryptedResponse = encryptAES(response); // เข้ารหัส Response
-            res.send(encryptedResponse); // ส่ง Response เป็นข้อความเข้ารหัสล้วนๆ
+            const encryptedResponse = encryptAES(response); // Encrypt the response
+            res.send(encryptedResponse); // Send the raw encrypted response
         } else {
             const response = { message: 'Invalid credentials' };
             const encryptedResponse = encryptAES(response);
@@ -183,13 +183,13 @@ app.post('/v2_login', express.raw({ type: '*/*' }), (req, res) => {
 // API Profile (Version 2)
 app.post('/v2_profile', express.raw({ type: '*/*' }), (req, res) => {
     try {
-        const encryptedBody = req.body.toString(); // รับค่า Raw String
-        const decryptedData = decryptAES(encryptedBody); // ถอดรหัส
+        const encryptedBody = req.body.toString(); // Receive the raw encrypted string
+        const decryptedData = decryptAES(encryptedBody); // Decrypt the string
         const { id } = decryptedData;
 
         if (users[id]) {
-            const encryptedResponse = encryptAES(users[id]); // เข้ารหัส Response
-            res.send(encryptedResponse); // ส่ง Response เป็นข้อความเข้ารหัสล้วนๆ
+            const encryptedResponse = encryptAES(users[id]); // Encrypt the response
+            res.send(encryptedResponse); // Send the raw encrypted response
         } else {
             const response = { message: 'Profile not found' };
             const encryptedResponse = encryptAES(response);
@@ -205,8 +205,8 @@ app.post('/v2_profile', express.raw({ type: '*/*' }), (req, res) => {
 // API Login (Version 3)
 app.post('/v3_login', (req, res) => {
     try {
-        const clientHash = req.headers['hashid']; // รับ hashid จาก Header
-        const serverHash = generateHMAC(req.body, secretKey); // สร้าง HMAC ใหม่จาก Body
+        const clientHash = req.headers['hashid']; // Retrieve hashid from headers
+        const serverHash = generateHMAC(req.body, secretKey); // Generate HMAC for the body
 
         if (clientHash !== serverHash) {
             return res.status(403).json({ message: 'Invalid hash, body may have been modified' });
@@ -228,17 +228,17 @@ app.post('/v3_login', (req, res) => {
 // API Profile (Version 3)
 app.post('/v3_profile', (req, res) => {
     try {
-        const clientHash = req.headers['hashid']; // รับ hashid จาก Header
-        const serverHash = generateHMAC(req.body, secretKey); // สร้าง HMAC ใหม่จาก Body
+        const clientHash = req.headers['hashid']; // Retrieve hashid from headers
+        const serverHash = generateHMAC(req.body, secretKey); // Generate HMAC for the body
 
         if (clientHash !== serverHash) {
             return res.status(403).json({ message: 'Invalid hash, body may have been modified' });
         }
 
-        const { id } = req.body; // ดึง id จาก Body
+        const { id } = req.body; // Extract id from the body
 
         if (users[id]) {
-            res.json(users[id]); // ส่งข้อมูล Profile
+            res.json(users[id]); // Send the profile data
         } else {
             res.status(404).json({ message: 'Profile not found' });
         }
@@ -381,6 +381,51 @@ app.post('/v5_profile', (req, res) => {
         });
     }
 });
+
+// Serve App6 (Version 6) Login Page
+app.get('/v6_login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'v6_login.html'));
+});
+
+// API Login (Version 6)
+app.post('/v6_login', (req, res) => {
+    try {
+        const { payload } = req.body; // Receive encrypted payload
+        const decryptedData = decryptAES(payload); // Decrypt payload
+        const { username, password } = decryptedData;
+
+        if (username === 'admin' && password === 'admin') {
+            const response = { message: 'Login successful', userId: '0001' };
+            res.json(response); // Return plain response
+        } else {
+            const response = { message: 'Invalid credentials' };
+            res.status(401).json(response);
+        }
+    } catch (err) {
+        const response = { message: 'Invalid payload' };
+        res.status(400).json(response);
+    }
+});
+
+// API Profile (Version 6)
+app.post('/v6_profile', (req, res) => {
+    try {
+        const { payload } = req.body; // Receive encrypted payload
+        const decryptedData = decryptAES(payload); // Decrypt payload
+        const { id } = decryptedData;
+
+        if (users[id]) {
+            res.json(users[id]); // Return plain profile data
+        } else {
+            const response = { message: 'Profile not found' };
+            res.status(404).json(response);
+        }
+    } catch (err) {
+        const response = { message: 'Invalid payload' };
+        res.status(400).json(response);
+    }
+});
+
 
 // Start server
 app.listen(PORT, () => {

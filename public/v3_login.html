@@ -19,10 +19,10 @@
         <button>Back to Home</button>
     </a>
     <script>
-        // คีย์ลับต้องเหมือนกับที่เซิร์ฟเวอร์ใช้
+
         const secretKey = 'super_secret_key';
 
-        // ฟังก์ชันสร้าง HMAC
+        // Function to generate HMAC
         function generateHMAC(body, key) {
             return CryptoJS.HmacSHA256(JSON.stringify(body), key).toString();
         }
@@ -40,7 +40,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'hashid': hashid // เพิ่ม hashid ใน Header
+                    'hashid': hashid // Add hashid in the header
                 },
                 body: JSON.stringify(body)
             });
