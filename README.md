@@ -13,7 +13,7 @@ This project includes five versions of secure communication to demonstrate diffe
 - **App 3:** Sends plain JSON and adds an **HMAC hash** in the request headers to verify the integrity of the request body.
 - **App 4:** Encrypts the request body using **AES (CBC)** with a dynamically generated IV for every request and includes the IV in the payload.
 - **App 5:** Encrypts the request body using **AES (CBC)** with both a dynamically generated IV and a dynamically generated secret key for every request, ensuring maximum data protection.
-
+- **App 6:** Encrypts the request body using **AES (CBC)** with a static IV, but the server returns responses in plain JSON without encryption for simplicity.
 ---
 
 ## Installation
